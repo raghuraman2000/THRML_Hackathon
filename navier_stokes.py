@@ -257,20 +257,28 @@ class NavierStokesSolver:
 
 if __name__ == "__main__":
     from pathlib import Path
+    from argparse import ArgumentParser
 
-    import matplotlib.pyplot as plt
     from tqdm import tqdm
 
-    from fluid_sampler import make_pipe_with_boulder, plot_flow
+    from fluid_sampler import make_grid, plot_flow
 
     # -----------------------------
     # Create simulation
     # -----------------------------
-    width = 80
-    height = 40
-    radius = 6.0
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--geometry",
+        choices=("boulder", "fins", "twin-boulders"),
+        default="boulder",
+        help="pipe obstacle layout to sample",
+    )
+    parser.add_argument("--width", type=int, default=22)
+    parser.add_argument("--height", type=int, default=11)
+    parser.add_argument("--obstacle-radius", type=float, default=2.2)
+    args = parser.parse_args()
 
-    grid = make_pipe_with_boulder(width, height, radius)
+    grid = make_grid(args.geometry, args.width, args.height, args.obstacle_radius)
 
     solver = NavierStokesSolver(
         grid,
@@ -286,8 +294,8 @@ if __name__ == "__main__":
     for _ in tqdm(range(steps)):
         state = solver.step(inflow_speed=2.0)
 
-    u = state.u
-    v = state.v
+    u = state.u.reshape((grid.height, grid.width))
+    v = state.v.reshape((grid.height, grid.width))
 
     out_path = Path("fluid_flow_thrml/outputs/navier_stokes.png")
     # -----------------------------
