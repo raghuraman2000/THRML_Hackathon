@@ -1,0 +1,4 @@
+__pycache__/
+*.py[cod]
+.matplotlib/
+.DS_Store
