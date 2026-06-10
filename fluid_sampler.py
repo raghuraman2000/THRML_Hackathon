@@ -17,6 +17,7 @@ import argparse
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
@@ -40,6 +41,8 @@ from thrml import (
 )
 from thrml.models import CategoricalEBMFactor, CategoricalGibbsConditional
 
+if TYPE_CHECKING:
+    from jaxtyping import Float
 
 @dataclass(frozen=True)
 class Grid:
@@ -461,15 +464,11 @@ def sample_flow(args: argparse.Namespace):
 
 def plot_flow(
     grid: Grid,
-    cats: np.ndarray,
-    assignment: np.ndarray,
-    energy: float,
-    geometry: str,
+    u: Float[np.ndarray, "n_x n_y"],
+    v: Float[np.ndarray, "n_x n_y"],
     out_path: Path,
+    title: str,
 ) -> None:
-    field = cats[assignment].reshape(grid.height, grid.width, 2).astype(float)
-    u = field[:, :, 0]
-    v = field[:, :, 1]
     speed = np.sqrt(u * u + v * v)
 
     y, x = np.mgrid[0 : grid.height, 0 : grid.width]
@@ -482,8 +481,7 @@ def plot_flow(
     ax.imshow(np.where(mask, 1.0, np.nan), origin="lower", cmap="gray_r", alpha=0.95)
     ax.quiver(x, y, u_plot, v_plot, color="black", pivot="middle", scale=55, width=0.003)
 
-    title_geometry = geometry.replace("-", " ")
-    ax.set_title(f"THRML sampled toy inviscid pipe flow: {title_geometry}, energy={energy:.2f}")
+    ax.set_title(title)
     ax.set_aspect("equal")
     ax.set_xlim(-0.5, grid.width - 0.5)
     ax.set_ylim(-0.5, grid.height - 0.5)
@@ -528,7 +526,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     grid, cats, assignment, energy = sample_flow(args)
-    plot_flow(grid, cats, assignment, energy, args.geometry, args.output)
+
+    field = cats[assignment].reshape(grid.height, grid.width, 2).astype(float)
+    u = field[:, :, 0]
+    v = field[:, :, 1]
+    title_geometry = args.geometry.replace("-", " ")
+    plot_flow(grid, u, v, args.output,
+        title=f"THRML sampled toy inviscid pipe flow: {title_geometry}, energy={energy:.2f}"
+    )
     print(f"wrote {args.output}")
     return 0
 
